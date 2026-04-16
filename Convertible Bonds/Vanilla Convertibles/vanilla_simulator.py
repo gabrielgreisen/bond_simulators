@@ -30,42 +30,16 @@ def simulation(N,
 
       frequencies = [ql.Annual, ql.Semiannual, ql.Quarterly]
 
-      # Edge-case cells: each defines [S, r, q, bs_vol, credit_spread, coupon_rate, maturity_years, conversion_ratio]
-      cells = [
-            # Cell 1 — Deep ITM × Short Maturity
-            (np.array([200, 0.01, 0.00, 0.10, 0.005, 0.00, 0.25, 5.0]),
-             np.array([500, 0.09, 0.06, 0.80, 0.15,  0.10, 2.5,  10.0])),
-            # Cell 2 — Deep ITM × Long Maturity
-            (np.array([200, 0.01, 0.00, 0.10, 0.005, 0.00, 7.5, 5.0]),
-             np.array([500, 0.09, 0.06, 0.80, 0.15,  0.10, 10.0, 10.0])),
-            # Cell 3 — Deep OTM × Short Maturity
-            (np.array([10,  0.01, 0.00, 0.10, 0.005, 0.00, 0.25, 1.0]),
-             np.array([40,  0.09, 0.06, 0.80, 0.15,  0.10, 2.5,  3.0])),
-            # Cell 4 — Deep OTM × Long Maturity
-            (np.array([10,  0.01, 0.00, 0.10, 0.005, 0.00, 7.5, 1.0]),
-             np.array([40,  0.09, 0.06, 0.80, 0.15,  0.10, 10.0, 3.0])),
-            # Cell 5 — Full Moneyness × Sub-1y Maturity
-            (np.array([10,  0.01, 0.00, 0.10, 0.005, 0.00, 0.25, 1.0]),
-             np.array([500, 0.09, 0.06, 0.80, 0.15,  0.10, 1.0,  10.0])),
-      ]
-
-      # Split N equally across cells, remainder goes to last cell
-      n_cells = len(cells)
-      base_n = N // n_cells
-      cell_sizes = [base_n] * n_cells
-      cell_sizes[-1] += N - base_n * n_cells
-
-      # Latin Hypercube Sampling per cell, concatenated
+      # Latin Hypercube Sampling over 8 continuous dimensions
+      # Columns: S, r, q, bs_vol, credit_spread, coupon_rate, maturity_years, conversion_ratio
       sampler = qmc.LatinHypercube(d=8)
-      lhs_blocks = []
-      for (lo, hi), n_i in zip(cells, cell_sizes):
-            unit = sampler.random(n=n_i)
-            lhs_blocks.append(qmc.scale(unit, lo, hi))
-      lhs_scaled = np.vstack(lhs_blocks)
+      lhs_unit = sampler.random(n=N)
 
-      # Shuffle so cells are interleaved across chunks
+      lower = np.array([10,   0.01, 0.00, 0.10, 0.005, 0.00, 1.0, 1.0])
+      upper = np.array([500,  0.09, 0.06, 0.80, 0.15,  0.10, 10.0, 10.0])
+      lhs_scaled = qmc.scale(lhs_unit, lower, upper)
+
       rng = np.random.default_rng()
-      rng.shuffle(lhs_scaled)
 
       data = []
       chunk = 0
